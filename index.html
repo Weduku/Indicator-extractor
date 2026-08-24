@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indicator Extractor</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>Indicator Extractor</h1>
+  <p class="subtitle">Runs entirely in your browser. Documents are never uploaded anywhere.</p>
+</header>
+
+<div id="boot-status" class="boot-status">Loading Python engine (Pyodide)… this only happens once per visit.</div>
+
+<nav id="tabs" class="tabs" style="display:none;">
+  <button class="tab-btn active" data-tab="extract">Extract</button>
+  <button class="tab-btn" data-tab="indicators">Indicators</button>
+  <button class="tab-btn" data-tab="data">Data</button>
+  <button class="tab-btn" data-tab="build">Build Table</button>
+  <button class="tab-btn" data-tab="cloud">Cloud Sync</button>
+</nav>
+
+<main id="app" style="display:none;">
+
+  <!-- EXTRACT TAB -->
+  <section id="tab-extract" class="tab-panel active">
+    <div class="panel">
+      <label>Word documents (.docx) or images (.png/.jpg/etc.)</label>
+      <input type="file" id="fileInput" accept=".docx,.png,.jpg,.jpeg,.bmp,.tiff,.gif" multiple>
+      <div id="fileList" class="file-list"></div>
+      <label class="checkbox-label">
+        <input type="checkbox" id="ocrImagesCheckbox" checked>
+        OCR images (standalone image files, plus images embedded inside .docx files —
+        e.g. a screenshotted table). Runs fully in your browser via Tesseract.js, no
+        server involved.
+      </label>
+    </div>
+
+    <div class="panel row">
+      <div>
+        <label>Reporting period type</label>
+        <select id="periodType">
+          <option>All</option>
+          <option>Year</option>
+          <option>Month</option>
+          <option>Week</option>
+        </select>
+      </div>
+      <div>
+        <label>Reporting period value</label>
+        <input type="text" id="periodValue" placeholder="e.g. 2026">
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button id="useCurrentPeriod" class="secondary">Use current</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <button id="processBtn" class="primary">Process files</button>
+      <span id="processStatus" class="status-text"></span>
+    </div>
+
+    <div class="panel">
+      <h3>Results from this run</h3>
+      <div class="table-wrap">
+        <table id="resultsTable">
+          <thead><tr>
+            <th>Document</th><th>Indicator</th><th>Value</th>
+            <th>Population</th><th>Gender</th><th>Household/Individual</th>
+            <th>Period</th><th>Source</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- INDICATORS TAB -->
+  <section id="tab-indicators" class="tab-panel">
+    <div class="panel">
+      <p>Define the indicator labels to look for. Add synonyms (comma-separated)
+      for alternate wordings used across your documents.</p>
+      <div class="row">
+        <div>
+          <label>Indicator name</label>
+          <input type="text" id="indName" placeholder="e.g. Completion Rate">
+        </div>
+        <div class="grow">
+          <label>Synonyms (comma-separated)</label>
+          <input type="text" id="indSynonyms" placeholder="e.g. Completion %, Completion Percentage">
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="addIndicatorBtn" class="primary">Add</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="indicatorsTable">
+          <thead><tr><th>Indicator</th><th>Synonyms</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- DATA TAB -->
+  <section id="tab-data" class="tab-panel">
+    <div class="panel row">
+      <div>
+        <label>Filter by indicator</label>
+        <select id="dataFilterIndicator"><option>(All)</option></select>
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button id="refreshDataBtn" class="secondary">Refresh</button>
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button id="exportAllCsvBtn" class="secondary">Export All to CSV</button>
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button id="resetDataBtn" class="danger">Reset All Data</button>
+      </div>
+    </div>
+    <div class="panel">
+      <p id="dataCount" class="status-text"></p>
+      <div class="table-wrap">
+        <table id="dataTable">
+          <thead><tr>
+            <th>Document</th><th>Indicator</th><th>Value</th>
+            <th>Population</th><th>Gender</th><th>Unit</th>
+            <th>Period</th><th>Source</th><th>Extracted At</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- BUILD TABLE TAB -->
+  <section id="tab-build" class="tab-panel">
+    <div class="panel row">
+      <div>
+        <label>Rows</label>
+        <select id="pivotRowField"></select>
+      </div>
+      <div>
+        <label>Columns</label>
+        <select id="pivotColField"><option>(None)</option></select>
+      </div>
+      <div>
+        <label>Aggregation</label>
+        <select id="pivotAgg">
+          <option>Count</option>
+          <option>List values</option>
+          <option>Sum</option>
+        </select>
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button id="buildPivotBtn" class="primary">Build</button>
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button id="exportPivotBtn" class="secondary">Export CSV</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="table-wrap">
+        <table id="pivotTable"><thead><tr></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLOUD SYNC TAB -->
+  <section id="tab-cloud" class="tab-panel">
+    <div class="panel">
+      <h3>One-time setup (Google Cloud project)</h3>
+      <p>Someone with access to a Google Cloud project needs to do this once:</p>
+      <ol>
+        <li>Go to <b>Google Cloud Console → APIs & Services → Library</b> and enable
+            the <b>Google Drive API</b> and <b>Google Sheets API</b>.</li>
+        <li><b>APIs & Services → Credentials → Create Credentials → OAuth client ID</b>.
+            Application type: <b>Web application</b>.</li>
+        <li>Under <b>Authorized JavaScript origins</b>, add the URL this page is
+            hosted at (e.g. your GitHub Pages URL, just the origin — no trailing path).</li>
+        <li>If prompted, configure the <b>OAuth consent screen</b> — internal-only if
+            this is a Google Workspace org and you want it restricted to your org.</li>
+        <li>Copy the <b>Client ID</b> into the field below.</li>
+      </ol>
+      <p class="status-text">This app requests read access to files in the folder you
+      link, plus permission to create/edit a results Sheet inside that same folder —
+      nothing else in your Drive.</p>
+    </div>
+
+    <div class="panel row">
+      <div class="grow"><label>Google Client ID</label>
+        <input type="text" id="googleClientId" placeholder="xxxxxxxx.apps.googleusercontent.com"></div>
+    </div>
+    <div class="panel row">
+      <div class="grow"><label>Google Drive folder link</label>
+        <input type="text" id="googleFolderLink" placeholder="Paste a Drive folder link, e.g. https://drive.google.com/drive/folders/..."></div>
+    </div>
+    <div class="panel row">
+      <div><label>Results Sheet name</label><input type="text" id="googleSheetName" value="IndicatorData"></div>
+    </div>
+    <div class="panel">
+      <button id="saveGoogleSettingsBtn" class="secondary">Save Settings</button>
+      <button id="googleSignInBtn" class="secondary">Sign In</button>
+      <button id="googleSyncBtn" class="primary">Sync Now</button>
+      <p class="status-text">Sync Now reads any new or changed .docx files in the linked
+      folder, extracts indicators from them (tagged with the reporting period set on the
+      Extract tab), and pushes new rows into the results Sheet in that same folder.</p>
+      <p id="cloudStatus" class="status-text"></p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <button id="exportDbBtn" class="secondary small">Download data backup (.db)</button>
+  <input type="file" id="importDbInput" accept=".db" style="display:none;">
+  <button id="importDbBtn" class="secondary small">Restore backup</button>
+</footer>
+
+<!-- Pyodide -->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<!-- Tesseract.js for browser-based OCR (Extract tab, image support) -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+<!-- Google Identity Services for browser-based Google sign-in (Cloud Sync tab) -->
+<script src="https://accounts.google.com/gsi/client"></script>
+<script src="app.js"></script>
+</body>
+</html>
