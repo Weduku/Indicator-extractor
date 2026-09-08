@@ -148,7 +148,21 @@ gender/household), reporting periods, append-not-overwrite behavior, OCR
 support, and the pivot table builder — is the same tested logic as the
 desktop app.
 
-## 8. A note on testing
+## 8. Troubleshooting
+
+- **"ModuleNotFoundError: No module named 'X'" during boot** — Pyodide
+  ships a slimmed-down Python standard library and loads a few modules
+  (like `sqlite3`) on demand rather than bundling them by default. This is
+  already handled for everything this app uses, but if you extend
+  `extractor.py` with a new stdlib import and hit this, add the module
+  name to the `pyodide.loadPackage([...])` list near the top of `boot()`
+  in `app.js` — the error message itself will tell you the exact fix.
+- **Nothing happens / stuck on "Loading Python engine"** — check the
+  browser's developer console (F12) for the actual error; the most common
+  cause is no internet connection on first load (Pyodide needs to download
+  itself and a couple of packages once).
+
+## 9. A note on testing
 
 I built and unit-tested the Python extraction logic itself (identical to
 the desktop app's tested behavior), including the OCR-matching path. I was

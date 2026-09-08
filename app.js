@@ -114,7 +114,7 @@ async function boot() {
     pyodide = await loadPyodide();
 
     bootStatus.textContent = "Installing the document-reading library…";
-    await pyodide.loadPackage(["lxml", "micropip"]);
+    await pyodide.loadPackage(["lxml", "micropip", "sqlite3"]);
     const micropip = pyodide.pyimport("micropip");
     await micropip.install("python-docx");
 
